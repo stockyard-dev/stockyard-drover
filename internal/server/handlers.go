@@ -1,60 +1,11 @@
 package server
-
-import (
-	"encoding/json"
-	"net/http"
-	"strconv"
-)
-
-type Item struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
-}
-
-func (s *Server) handleListItems(w http.ResponseWriter, r *http.Request) {
-	// List items — tool-specific query would go here
-	writeJSON(w, http.StatusOK, []Item{})
-}
-
-func (s *Server) handleCreateItem(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
-		return
-	}
-	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "name required")
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]string{"status": "created", "name": req.Name})
-}
-
-func (s *Server) handleGetItem(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
-	}
-	writeJSON(w, http.StatusOK, Item{ID: id})
-}
-
-func (s *Server) handleUpdateItem(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
-}
-
-func (s *Server) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
-func (s *Server) handleUI(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html")
-	w.Write(dashboardHTML)
-}
+import("encoding/json";"net/http";"strconv";"time";"github.com/stockyard-dev/stockyard-drover/internal/store")
+func(s *Server)handleListQueues(w http.ResponseWriter,r *http.Request){list,_:=s.db.ListQueues();if list==nil{list=[]store.Queue{}};writeJSON(w,200,list)}
+func(s *Server)handleCreateQueue(w http.ResponseWriter,r *http.Request){var q store.Queue;json.NewDecoder(r.Body).Decode(&q);if q.Name==""{writeError(w,400,"name required");return};if q.Concurrency==0{q.Concurrency=1};if err:=s.db.CreateQueue(&q);err!=nil{writeError(w,500,err.Error());return};writeJSON(w,201,q)}
+func(s *Server)handleDeleteQueue(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);s.db.DeleteQueue(id);writeJSON(w,200,map[string]string{"status":"deleted"})}
+func(s *Server)handleListJobs(w http.ResponseWriter,r *http.Request){qid,_:=strconv.ParseInt(r.URL.Query().Get("queue_id"),10,64);status:=r.URL.Query().Get("status");list,_:=s.db.ListJobs(qid,status);if list==nil{list=[]store.Job{}};writeJSON(w,200,list)}
+func(s *Server)handleEnqueue(w http.ResponseWriter,r *http.Request){var j store.Job;json.NewDecoder(r.Body).Decode(&j);if j.QueueID==0{writeError(w,400,"queue_id required");return};if j.Payload==""{j.Payload="{}"};if j.ScheduledAt.IsZero(){j.ScheduledAt=time.Now()};if err:=s.db.EnqueueJob(&j);err!=nil{writeError(w,500,err.Error());return};writeJSON(w,201,j)}
+func(s *Server)handleUpdateJob(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);var req struct{Status string `json:"status"`;Error string `json:"error"`};json.NewDecoder(r.Body).Decode(&req);if req.Status==""{writeError(w,400,"status required");return};s.db.UpdateJobStatus(id,req.Status,req.Error);writeJSON(w,200,map[string]string{"status":"updated"})}
+func(s *Server)handleRetryJob(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);s.db.RetryJob(id);writeJSON(w,200,map[string]string{"status":"retried"})}
+func(s *Server)handleDeleteJob(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);s.db.DeleteJob(id);writeJSON(w,200,map[string]string{"status":"deleted"})}
+func(s *Server)handleStats(w http.ResponseWriter,r *http.Request){m,_:=s.db.JobStats();writeJSON(w,200,m)}

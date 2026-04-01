@@ -1,24 +1,4 @@
 package server
-
-type Tier string
-
-const (
-	TierFree Tier = "free"
-	TierPro  Tier = "pro"
-)
-
-type Limits struct {
-	Tier        Tier
-	Description string
-}
-
-func LimitsFor(tier string) Limits {
-	if tier == "pro" {
-		return Limits{Tier: TierPro, Description: "Unlimited assets and reminders"}
-	}
-	return Limits{Tier: TierFree, Description: "25 assets"}
-}
-
-func (l Limits) IsPro() bool {
-	return l.Tier == TierPro
-}
+type Limits struct{Tier string;Description string}
+func LimitsFor(tier string)Limits{if tier=="pro"{return Limits{Tier:"pro"}};return Limits{Tier:"free"}}
+func(l Limits)IsPro()bool{return l.Tier=="pro"}

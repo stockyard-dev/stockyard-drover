@@ -1,54 +1,16 @@
 package store
-
-import (
-	"database/sql"
-	"fmt"
-	"os"
-	"path/filepath"
-
-	_ "modernc.org/sqlite"
-)
-
-type DB struct {
-	*sql.DB
-}
-
-func Open(dataDir string) (*DB, error) {
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf("mkdir: %w", err)
-	}
-	dsn := filepath.Join(dataDir, "drover.db") + "?_journal_mode=WAL&_busy_timeout=5000"
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("open: %w", err)
-	}
-	db.SetMaxOpenConns(1)
-	if err := migrate(db); err != nil {
-		return nil, fmt.Errorf("migrate: %w", err)
-	}
-	return &DB{db}, nil
-}
-
-func migrate(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS assets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        provider TEXT,
-        cost_cents INTEGER DEFAULT 0,
-        billing_cycle TEXT DEFAULT 'monthly',
-        renewal_date TEXT,
-        status TEXT DEFAULT 'active',
-        notes TEXT,
-        tags TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS reminders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        asset_id INTEGER NOT NULL,
-        remind_days_before INTEGER DEFAULT 14,
-        email TEXT,
-        active INTEGER DEFAULT 1
-     );`)
-	return err
-}
+import("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{*sql.DB}
+type Queue struct{ID int64 `json:"id"`;Name string `json:"name"`;Concurrency int `json:"concurrency"`;CreatedAt time.Time `json:"created_at"`}
+type Job struct{ID int64 `json:"id"`;QueueID int64 `json:"queue_id"`;QueueName string `json:"queue_name,omitempty"`;Payload string `json:"payload"`;Status string `json:"status"`;Attempts int `json:"attempts"`;MaxAttempts int `json:"max_attempts"`;Error string `json:"error"`;ScheduledAt time.Time `json:"scheduled_at"`;StartedAt *time.Time `json:"started_at"`;FinishedAt *time.Time `json:"finished_at"`;CreatedAt time.Time `json:"created_at"`}
+func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"drover.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
+func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS queues(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,concurrency INTEGER DEFAULT 1,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS jobs(id INTEGER PRIMARY KEY AUTOINCREMENT,queue_id INTEGER NOT NULL,payload TEXT DEFAULT '{}',status TEXT DEFAULT 'pending',attempts INTEGER DEFAULT 0,max_attempts INTEGER DEFAULT 3,error TEXT DEFAULT '',scheduled_at DATETIME DEFAULT CURRENT_TIMESTAMP,started_at DATETIME,finished_at DATETIME,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE INDEX IF NOT EXISTS jobs_status ON jobs(status);CREATE INDEX IF NOT EXISTS jobs_queue ON jobs(queue_id,status);`);return err}
+func(db *DB)ListQueues()([]Queue,error){rows,err:=db.Query(`SELECT id,name,concurrency,created_at FROM queues ORDER BY name`);if err!=nil{return nil,err};defer rows.Close();var out[]Queue;for rows.Next(){var q Queue;rows.Scan(&q.ID,&q.Name,&q.Concurrency,&q.CreatedAt);out=append(out,q)};return out,nil}
+func(db *DB)CreateQueue(q *Queue)error{res,err:=db.Exec(`INSERT INTO queues(name,concurrency)VALUES(?,?)`,q.Name,q.Concurrency);if err!=nil{return err};q.ID,_=res.LastInsertId();return nil}
+func(db *DB)DeleteQueue(id int64)error{_,err:=db.Exec(`DELETE FROM queues WHERE id=?`,id);_,_=db.Exec(`DELETE FROM jobs WHERE queue_id=?`,id);return err}
+func(db *DB)ListJobs(queueID int64,status string)([]Job,error){q:=`SELECT j.id,j.queue_id,COALESCE(q.name,''),j.payload,j.status,j.attempts,j.max_attempts,j.error,j.scheduled_at,j.started_at,j.finished_at,j.created_at FROM jobs j LEFT JOIN queues q ON q.id=j.queue_id WHERE 1=1`;var args[]interface{};if queueID>0{q+=" AND j.queue_id=?";args=append(args,queueID)};if status!=""{q+=" AND j.status=?";args=append(args,status)};q+=" ORDER BY j.created_at DESC LIMIT 100";rows,err:=db.Query(q,args...);if err!=nil{return nil,err};defer rows.Close();var out[]Job;for rows.Next(){var j Job;rows.Scan(&j.ID,&j.QueueID,&j.QueueName,&j.Payload,&j.Status,&j.Attempts,&j.MaxAttempts,&j.Error,&j.ScheduledAt,&j.StartedAt,&j.FinishedAt,&j.CreatedAt);out=append(out,j)};return out,nil}
+func(db *DB)EnqueueJob(j *Job)error{if j.MaxAttempts==0{j.MaxAttempts=3};res,err:=db.Exec(`INSERT INTO jobs(queue_id,payload,max_attempts,scheduled_at)VALUES(?,?,?,?)`,j.QueueID,j.Payload,j.MaxAttempts,j.ScheduledAt);if err!=nil{return err};j.ID,_=res.LastInsertId();j.Status="pending";return nil}
+func(db *DB)UpdateJobStatus(id int64,status,errMsg string)error{if errMsg!=""{_,err:=db.Exec(`UPDATE jobs SET status=?,error=?,finished_at=CURRENT_TIMESTAMP WHERE id=?`,status,errMsg,id);return err};if status=="running"{_,err:=db.Exec(`UPDATE jobs SET status=?,attempts=attempts+1,started_at=CURRENT_TIMESTAMP WHERE id=?`,status,id);return err};_,err:=db.Exec(`UPDATE jobs SET status=?,finished_at=CURRENT_TIMESTAMP WHERE id=?`,status,id);return err}
+func(db *DB)RetryJob(id int64)error{_,err:=db.Exec(`UPDATE jobs SET status='pending',error='',scheduled_at=CURRENT_TIMESTAMP WHERE id=?`,id);return err}
+func(db *DB)DeleteJob(id int64)error{_,err:=db.Exec(`DELETE FROM jobs WHERE id=?`,id);return err}
+func(db *DB)JobStats()(map[string]int,error){rows,err:=db.Query(`SELECT status,COUNT(*) FROM jobs GROUP BY status`);if err!=nil{return nil,err};defer rows.Close();m:=map[string]int{"pending":0,"running":0,"done":0,"failed":0};for rows.Next(){var s string;var n int;rows.Scan(&s,&n);m[s]=n};return m,nil}

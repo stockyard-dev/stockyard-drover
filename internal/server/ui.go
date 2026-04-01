@@ -1,120 +1,34 @@
 package server
 
 var dashboardHTML = []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stockyard Drover</title>
-<style>
-  :root {
-    --bg: #1a1410;
-    --surface: #241c15;
-    --border: #3d2e1e;
-    --rust: #c4622d;
-    --leather: #8b5e3c;
-    --cream: #f5e6c8;
-    --muted: #7a6550;
-    --text: #e8d5b0;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace, sans-serif; min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  .logo { color: var(--rust); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
-  .badge { background: var(--rust); color: var(--cream); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
-  main { max-width: 960px; margin: 2rem auto; padding: 0 2rem; }
-  .hero { text-align: center; padding: 3rem 0 2rem; }
-  .hero h1 { font-size: 2rem; color: var(--cream); margin-bottom: 0.5rem; }
-  .hero p { color: var(--muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; text-align: center; }
-  .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--rust); }
-  .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
-  .card h2 { font-size: 1rem; color: var(--cream); margin-bottom: 1rem; }
-  .tier-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .tier { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
-  .tier.pro { border-color: var(--rust); }
-  .tier-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
-  .tier.pro .tier-name { color: var(--rust); }
-  .tier-desc { font-size: 0.85rem; color: var(--text); }
-  .tier-price { font-size: 0.8rem; color: var(--leather); margin-top: 0.5rem; }
-  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.75rem; }
-  footer a { color: var(--leather); text-decoration: none; }
-  .endpoint-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .endpoint-table th { text-align: left; color: var(--muted); padding: 0.5rem; border-bottom: 1px solid var(--border); }
-  .endpoint-table td { padding: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  .method { color: var(--rust); font-weight: 600; }
-</style>
-</head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stockyard Drover</title><style>:root{--bg:#1a1410;--surface:#241c15;--border:#3d2e1e;--rust:#c4622d;--cream:#f5e6c8;--muted:#7a6550;--text:#e8d5b0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace,sans-serif}header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem}.logo{color:var(--rust);font-size:1.25rem;font-weight:700}.badge{background:var(--rust);color:var(--cream);font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:3px;font-weight:600;text-transform:uppercase}main{max-width:1100px;margin:0 auto;padding:2rem}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}.stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;text-align:center}.stat-value{font-size:1.75rem;font-weight:700;color:var(--rust)}.stat-label{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem}.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem}.card h2{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem}.full{grid-column:1/-1}.form-row{display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap}select,input,textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1}textarea{min-height:80px;resize:vertical;flex:none;width:100%}.btn{background:var(--rust);color:var(--cream);border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}.btn:hover{opacity:0.85}.btn-sm{padding:0.25rem 0.6rem;font-size:0.75rem}.btn-danger{background:#7a2020}table{width:100%;border-collapse:collapse;font-size:0.82rem}th{text-align:left;color:var(--muted);padding:0.5rem;border-bottom:1px solid var(--border);font-size:0.75rem;text-transform:uppercase}td{padding:0.5rem;border-bottom:1px solid var(--border)}.empty{color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center}.badge-p{background:#1a2a3a;color:#5bc0de;border:1px solid #2d4a6a;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}.badge-r{background:#3a1a1a;color:#d9534f;border:1px solid #5a2d2d;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}.badge-g{background:#1a3a1a;color:#5cb85c;border:1px solid #2d5a2d;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}.badge-y{background:#3a2f1a;color:#f0ad4e;border:1px solid #5a4a2d;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}</style></head>
 <body>
-<header>
-  <span class="logo">⬡ Stockyard</span>
-  <span style="color:var(--muted);">/</span>
-  <span style="color:var(--cream);font-weight:600;">Drover</span>
-  <span class="badge">v0.1.0</span>
-</header>
+<header><span class="logo">&#x2B21; Stockyard</span><span style="color:var(--muted)">/</span><span style="color:var(--cream);font-weight:600">Drover</span><span class="badge">Task Queue</span></header>
 <main>
-  <div class="hero">
-    <h1>Drover</h1>
-    <p>Server inventory and asset tracker — servers, domains, SaaS subscriptions, renewal dates, costs</p>
-  </div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="stat-items">—</div>
-      <div class="stat-label">Total Items</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">9190</div>
-      <div class="stat-label">Port</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="stat-tier">—</div>
-      <div class="stat-label">Tier</div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Tier &amp; Limits</h2>
-    <div class="tier-box">
-      <div class="tier">
-        <div class="tier-name">Free</div>
-        <div class="tier-desc">25 assets</div>
-        <div class="tier-price">$0/mo</div>
-      </div>
-      <div class="tier pro">
-        <div class="tier-name">Pro</div>
-        <div class="tier-desc">Unlimited assets and reminders</div>
-        <div class="tier-price">$2.99/mo</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>API Endpoints</h2>
-    <table class="endpoint-table">
-      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td class="method">GET</td><td>/health</td><td>Health check</td></tr>
-        <tr><td class="method">GET</td><td>/api/version</td><td>Version info</td></tr>
-        <tr><td class="method">GET</td><td>/api/limits</td><td>Current tier limits</td></tr>
-        <tr><td class="method">GET</td><td>/api/items</td><td>List items</td></tr>
-        <tr><td class="method">POST</td><td>/api/items</td><td>Create item</td></tr>
-        <tr><td class="method">GET</td><td>/api/items/{id}</td><td>Get item</td></tr>
-        <tr><td class="method">PUT</td><td>/api/items/{id}</td><td>Update item</td></tr>
-        <tr><td class="method">DELETE</td><td>/api/items/{id}</td><td>Delete item</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="stats"><div class="stat"><div class="stat-value" id="s-pending">0</div><div class="stat-label">Pending</div></div><div class="stat"><div class="stat-value" id="s-running">0</div><div class="stat-label">Running</div></div><div class="stat"><div class="stat-value" id="s-done">0</div><div class="stat-label">Done</div></div><div class="stat"><div class="stat-value" id="s-failed">0</div><div class="stat-label">Failed</div></div></div>
+<div class="grid">
+<div class="card"><h2>New Queue</h2>
+<div class="form-row"><input id="f-qname" placeholder="Queue name"><input id="f-conc" type="number" placeholder="Concurrency" value="1" style="max-width:120px"></div>
+<button class="btn btn-sm" onclick="addQueue()">Create Queue</button>
+<div id="queue-list" style="margin-top:1rem"><div class="empty">No queues</div></div></div>
+<div class="card"><h2>Enqueue Job</h2>
+<div class="form-row"><select id="f-qsel"><option value="">-- Queue --</option></select></div>
+<textarea id="f-payload" placeholder='{"key":"value"}'></textarea>
+<div class="form-row" style="margin-top:0.5rem"><input id="f-attempts" type="number" placeholder="Max attempts" value="3"><button class="btn" onclick="enqueue()">Enqueue</button></div></div>
+</div>
+<div class="card full"><h2>Jobs <select id="filter-status" onchange="loadJobs()" style="flex:0;width:auto;margin-left:0.5rem"><option value="">All</option><option>pending</option><option>running</option><option>done</option><option>failed</option></select> <select id="filter-q" onchange="loadJobs()" style="flex:0;width:auto"></h2>
+<div id="job-list"><div class="empty">No jobs</div></div></div>
 </main>
-<footer>
-  <a href="https://stockyard.dev">stockyard.dev</a> &mdash; Operations & Teams &mdash; Apache 2.0
-</footer>
 <script>
-fetch('/api/limits').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-tier').textContent = d.tier.toUpperCase();
-});
-fetch('/api/items').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-items').textContent = Array.isArray(d) ? d.length : '0';
-});
-</script>
-</body>
-</html>`)
+function load(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){document.getElementById('s-pending').textContent=d.pending||0;document.getElementById('s-running').textContent=d.running||0;document.getElementById('s-done').textContent=d.done||0;document.getElementById('s-failed').textContent=d.failed||0})}
+function loadQueues(){fetch('/api/queues').then(function(r){return r.json()}).then(function(list){var sel=document.getElementById('f-qsel');sel.innerHTML='<option value="">-- Queue --</option>';var fq=document.getElementById('filter-q');fq.innerHTML='<option value="">All Queues</option>';list.forEach(function(q){sel.innerHTML+='<option value="'+q.id+'">'+q.name+'</option>';fq.innerHTML+='<option value="'+q.id+'">'+q.name+'</option>'});var el=document.getElementById('queue-list');el.innerHTML=list.length?list.map(function(q){return'<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border)"><span>'+q.name+'</span><span style="color:var(--muted);font-size:0.75rem">concurrency: '+q.concurrency+' &nbsp;<button class="btn btn-sm btn-danger" onclick="delQueue('+q.id+')">x</button></span></div>'}).join(''):'<div class="empty">No queues</div>'})}
+function loadJobs(){var s=document.getElementById('filter-status').value;var q=document.getElementById('filter-q').value;var u='/api/jobs'+(s||q?'?':'')+(s?'status='+s:'')+(s&&q?'&':'')+( q?'queue_id='+q:'');fetch(u).then(function(r){return r.json()}).then(function(list){var el=document.getElementById('job-list');var badgeCls={pending:'badge-p',running:'badge-y',done:'badge-g',failed:'badge-r'};el.innerHTML=list.length?'<table><thead><tr><th>ID</th><th>Queue</th><th>Status</th><th>Attempts</th><th>Payload</th><th>Error</th><th></th></tr></thead><tbody>'+list.map(function(j){return'<tr><td>'+j.id+'</td><td>'+j.queue_name+'</td><td><span class="'+(badgeCls[j.status]||'')+'">'+j.status+'</span></td><td>'+j.attempts+'/'+j.max_attempts+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+j.payload+'</td><td style="color:#d9534f;font-size:0.75rem">'+j.error+'</td><td>'+(j.status==='failed'?'<button class="btn btn-sm" onclick="retryJob('+j.id+')">Retry</button> ':'')+(j.status==='pending'?'<button class="btn btn-sm" onclick="markRunning('+j.id+')">Run</button> ':'')+(j.status==='running'?'<button class="btn btn-sm badge-g" onclick="markDone('+j.id+')">Done</button> ':'')+'<button class="btn btn-sm btn-danger" onclick="delJob('+j.id+')">x</button></td></tr>'}).join('')+"</tbody></table>":'<div class="empty">No jobs</div>'})}
+function addQueue(){var n=document.getElementById('f-qname').value.trim();var c=parseInt(document.getElementById('f-conc').value)||1;if(!n)return;fetch('/api/queues',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,concurrency:c})}).then(function(){document.getElementById('f-qname').value='';loadQueues()})}
+function delQueue(id){fetch('/api/queues/'+id,{method:'DELETE'}).then(function(){loadQueues();loadJobs();load()})}
+function enqueue(){var d={queue_id:parseInt(document.getElementById('f-qsel').value)||0,payload:document.getElementById('f-payload').value.trim()||'[}',max_attempts:parseInt(document.getElementById('f-attempts').value)||3};if(!d.queue_id)return;if(!d.payload){d.payload='{}'};fetch('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){document.getElementById('f-payload').value='';loadJobs();load()})}
+function retryJob(id){fetch('/api/jobs/'+id+'/retry',{method:'POST'}).then(function(){loadJobs();load()})}
+function markRunning(id){fetch('/api/jobs/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'running'})}).then(function(){loadJobs();load()})}
+function markDone(id){fetch('/api/jobs/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'done'})}).then(function(){loadJobs();load()})}
+function delJob(id){fetch('/api/jobs/'+id,{method:'DELETE'}).then(function(){loadJobs();load()})}
+load();loadQueues();loadJobs();setInterval(function(){load();loadJobs()},5000);
+</script></body></html>`)
