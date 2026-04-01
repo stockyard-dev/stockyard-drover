@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  drover:
+    build: .
+    ports:
+      - "9190:9190"
+    environment:
+      - PORT=9190
+      - DATA_DIR=/data
+      - DROVER_LICENSE_KEY=
+    volumes:
+      - drover_data:/data
+    restart: unless-stopped
+volumes:
+  drover_data:
