@@ -1,7 +1,7 @@
 package server
 import ("encoding/json";"log";"net/http";"github.com/stockyard-dev/stockyard-drover/internal/store")
-type Server struct{db *store.DB;mux *http.ServeMux}
-func New(db *store.DB)*Server{s:=&Server{db:db,mux:http.NewServeMux()}
+type Server struct{db *store.DB;mux *http.ServeMux;limits Limits}
+func New(db *store.DB,limits Limits)*Server{s:=&Server{db:db,mux:http.NewServeMux(),limits:limits}
 s.mux.HandleFunc("GET /api/queues",s.listQueues);s.mux.HandleFunc("POST /api/queues",s.createQueue);s.mux.HandleFunc("GET /api/queues/{id}",s.getQueue);s.mux.HandleFunc("DELETE /api/queues/{id}",s.deleteQueue)
 s.mux.HandleFunc("POST /api/queues/{id}/enqueue",s.enqueue);s.mux.HandleFunc("POST /api/queues/{id}/dequeue",s.dequeue)
 s.mux.HandleFunc("GET /api/queues/{id}/jobs",s.listJobs)
