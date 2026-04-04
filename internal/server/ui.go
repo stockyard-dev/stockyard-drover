@@ -1,28 +1,71 @@
 package server
 import "net/http"
-func(s *Server)dashboard(w http.ResponseWriter,r *http.Request){w.Header().Set("Content-Type","text/html; charset=utf-8");w.Write([]byte(dashHTML))}
-const dashHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Drover</title>
-<style>:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#c45d2c;--rl:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cd:#bfb5a3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--red:#c44040;--blue:#4a7ec4;--mono:'JetBrains Mono',Consolas,monospace;--serif:'Libre Baskerville',Georgia,serif}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;line-height:1.6}.hdr{padding:.6rem 1.2rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}.hdr h1{font-family:var(--serif);font-size:1rem}.hdr h1 span{color:var(--rl)}.main{max-width:800px;margin:0 auto;padding:1rem}.btn{font-family:var(--mono);font-size:.68rem;padding:.3rem .6rem;border:1px solid;cursor:pointer;background:transparent}.btn-p{border-color:var(--rust);color:var(--rl)}.btn-p:hover{background:var(--rust);color:var(--cream)}.overview{display:flex;gap:1.5rem;margin-bottom:1rem;font-size:.7rem;color:var(--leather)}.overview .stat b{display:block;font-size:1.2rem;color:var(--cream)}.card{background:var(--bg2);border:1px solid var(--bg3);padding:.6rem;margin-bottom:.4rem;cursor:pointer;transition:.1s}.card:hover{background:var(--bg3)}.card h3{font-size:.8rem;margin-bottom:.15rem}.card-meta{font-size:.65rem;color:var(--cm);display:flex;gap:.7rem}.job-row{display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;border-bottom:1px solid var(--bg3);font-size:.72rem}.st-pending{color:var(--gold)}.st-processing{color:var(--blue)}.st-done{color:var(--green)}.st-failed{color:var(--red)}.empty{text-align:center;padding:2rem;color:var(--cm);font-style:italic;font-family:var(--serif)}.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100}.modal{background:var(--bg2);border:1px solid var(--bg3);padding:1.5rem;width:90%;max-width:500px}.modal h2{font-family:var(--serif);font-size:.9rem;margin-bottom:1rem}label.fl{display:block;font-size:.65rem;color:var(--leather);text-transform:uppercase;letter-spacing:1px;margin-bottom:.2rem;margin-top:.5rem}input[type=text],textarea{background:var(--bg);border:1px solid var(--bg3);color:var(--cream);padding:.35rem .5rem;font-family:var(--mono);font-size:.78rem;width:100%;outline:none}textarea{resize:vertical;min-height:60px}</style>
-<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-</head><body><div class="hdr"><h1><span>Drover</span></h1><button class="btn btn-p" onclick="showNewQueue()">+ Queue</button></div>
-<div class="main"><div id="upgrade-banner" style="display:none;background:#241e18;border:1px solid #8b3d1a;border-left:3px solid #c45d2c;padding:.6rem 1rem;font-size:.78rem;color:#bfb5a3;margin-bottom:.8rem"><strong style="color:#f0e6d3">Free tier</strong> — 10 items max. <a href="https://stockyard.dev/drover/" target="_blank" style="color:#e8753a">Upgrade to Pro →</a></div><div class="overview" id="ov"></div><div id="qList"></div><div id="detail" style="display:none;margin-top:1rem"></div></div><div id="modal"></div>
+func(s *Server)dashboard(w http.ResponseWriter,r *http.Request){w.Header().Set("Content-Type","text/html");w.Write([]byte(dashHTML))}
+const dashHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Drover</title>
+<style>:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cd:#bfb5a3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--red:#c94444;--orange:#d4843a;--mono:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);line-height:1.5}
+.hdr{padding:1rem 1.5rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:.9rem;letter-spacing:2px}
+.main{padding:1.5rem;max-width:900px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:1.2rem}
+.st{background:var(--bg2);border:1px solid var(--bg3);padding:.6rem;text-align:center}.st-v{font-size:1.1rem}.st-l{font-size:.5rem;color:var(--cm);text-transform:uppercase;letter-spacing:1px;margin-top:.1rem}
+.queue-bar{display:flex;gap:.3rem;margin-bottom:1rem}
+.q-btn{font-size:.6rem;padding:.2rem .6rem;border:1px solid var(--bg3);background:var(--bg);color:var(--cm);cursor:pointer}.q-btn:hover{border-color:var(--leather)}.q-btn.active{border-color:var(--gold);color:var(--gold)}
+.job{display:flex;justify-content:space-between;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--bg3);font-size:.72rem}
+.job:hover{background:var(--bg2)}
+.status-pending{color:var(--gold)}.status-running{color:var(--orange)}.status-completed{color:var(--green)}.status-failed{color:var(--red)}.status-retrying{color:var(--orange)}
+.badge{font-size:.5rem;padding:.1rem .3rem;text-transform:uppercase;letter-spacing:1px}
+.badge-pending{background:#d4a84322;color:var(--gold);border:1px solid #d4a84344}
+.badge-running{background:#d4843a22;color:var(--orange);border:1px solid #d4843a44}
+.badge-completed{background:#4a9e5c22;color:var(--green);border:1px solid #4a9e5c44}
+.badge-failed{background:#c9444422;color:var(--red);border:1px solid #c9444444}
+.btn{font-size:.6rem;padding:.25rem .6rem;cursor:pointer;border:1px solid var(--bg3);background:var(--bg);color:var(--cd)}.btn:hover{border-color:var(--leather);color:var(--cream)}
+.btn-p{background:var(--rust);border-color:var(--rust);color:var(--bg)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--bg3);padding:1.5rem;width:400px;max-width:90vw}
+.modal h2{font-size:.8rem;margin-bottom:1rem;color:var(--rust)}
+.fr{margin-bottom:.5rem}.fr label{display:block;font-size:.55rem;color:var(--cm);text-transform:uppercase;letter-spacing:1px;margin-bottom:.15rem}
+.fr input,.fr select,.fr textarea{width:100%;padding:.35rem .5rem;background:var(--bg);border:1px solid var(--bg3);color:var(--cream);font-family:var(--mono);font-size:.7rem}
+.acts{display:flex;gap:.4rem;justify-content:flex-end;margin-top:.8rem}
+.empty{text-align:center;padding:3rem;color:var(--cm);font-style:italic;font-size:.75rem}
+</style></head><body>
+<div class="hdr"><h1>DROVER</h1><div><button class="btn" onclick="openQueue()">+ Queue</button> <button class="btn btn-p" onclick="openJob()">+ Enqueue Job</button></div></div>
+<div class="main">
+<div class="stats" id="stats"></div>
+<div class="queue-bar" id="queues"></div>
+<div id="jobs"></div>
+</div>
+<div class="modal-bg" id="mbg" onclick="if(event.target===this)cm()"><div class="modal" id="mdl"></div></div>
 <script>
-let curQueue='';async function api(u,o){return(await fetch(u,o)).json()}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function timeAgo(d){if(!d)return'';const s=Math.floor((Date.now()-new Date(d))/1e3);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago'}
-async function init(){const sd=await api('/api/stats');document.getElementById('ov').innerHTML='<div class="stat"><b style="color:var(--gold)">'+sd.pending+'</b>Pending</div><div class="stat"><b style="color:var(--blue)">'+sd.processing+'</b>Processing</div><div class="stat"><b style="color:var(--green)">'+sd.done+'</b>Done</div><div class="stat"><b style="color:var(--red)">'+sd.failed+'</b>Failed</div>';loadQueues()}
-async function loadQueues(){const d=await api('/api/queues');const qs=d.queues||[];
-document.getElementById('qList').innerHTML=qs.length?qs.map(q=>'<div class="card" onclick="openQ(\''+q.id+'\')"><h3>'+esc(q.name)+'</h3><div class="card-meta"><span style="color:var(--gold)">'+q.pending_count+' pending</span><span style="color:var(--blue)">'+q.processing_count+' processing</span><span style="color:var(--green)">'+q.done_count+' done</span>'+(q.failed_count?'<span style="color:var(--red)">'+q.failed_count+' failed</span>':'')+'</div></div>').join(''):'<div class="empty">No queues yet.</div>'}
-async function openQ(id){curQueue=id;const[q,jd]=await Promise.all([api('/api/queues/'+id),api('/api/queues/'+id+'/jobs')]);
-const jobs=(jd.jobs||[]).map(j=>'<div class="job-row"><span class="st-'+j.status+'" style="width:60px;font-weight:700">'+j.status+'</span><span style="flex:1;color:var(--cd);font-size:.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(j.payload?j.payload.substring(0,60):'(empty)')+'</span><span style="color:var(--cm);font-size:.6rem">'+j.attempts+'/'+j.max_attempts+'</span><span style="color:var(--cm);font-size:.6rem">'+timeAgo(j.created_at)+'</span>'+(j.status==='failed'?'<span style="cursor:pointer;font-size:.55rem;color:var(--rl)" onclick="retry(\''+j.id+'\')">retry</span>':'')+'</div>').join('');
-document.getElementById('detail').style.display='block';
-document.getElementById('detail').innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span style="font-size:.75rem;color:var(--leather)">'+esc(q.name)+'</span><div style="display:flex;gap:.3rem"><button class="btn btn-p" onclick="showEnqueue()">Enqueue</button></div></div>'+(jobs||'<div class="empty" style="padding:1rem">No jobs.</div>')}
-async function retry(id){await api('/api/jobs/'+id+'/retry',{method:'POST'});openQ(curQueue);init()}
-function showNewQueue(){document.getElementById('modal').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>New Queue</h2><label class="fl">Name</label><input type="text" id="nq-name" placeholder="emails"><label class="fl">Description</label><input type="text" id="nq-desc"><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-p" onclick="saveQ()">Create</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="closeModal()">Cancel</button></div></div></div>'}
-async function saveQ(){const b={name:document.getElementById('nq-name').value,description:document.getElementById('nq-desc').value};if(!b.name){alert('Required');return};const r=await api('/api/queues',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});curQueue=r.id;closeModal();init()}
-function showEnqueue(){document.getElementById('modal').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>Enqueue Job</h2><label class="fl">Payload (JSON)</label><textarea id="ej-payload" rows="4" placeholder=\'{"to":"user@example.com","subject":"Welcome"}\'></textarea><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-p" onclick="doEnqueue()">Enqueue</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="closeModal()">Cancel</button></div></div></div>'}
-async function doEnqueue(){const b={payload:document.getElementById('ej-payload').value};await api('/api/queues/'+curQueue+'/enqueue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});closeModal();openQ(curQueue);init()}
-function closeModal(){document.getElementById('modal').innerHTML=''}
-init();setInterval(()=>{init();if(curQueue)openQ(curQueue)},5000)
-fetch('/api/tier').then(r=>r.json()).then(j=>{if(j.tier==='free'){var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'}}).catch(()=>{var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'});
+const A='/api';let queues=[],jobs=[],curQ='';
+async function load(){const[q,s]=await Promise.all([fetch(A+'/queues').then(r=>r.json()),fetch(A+'/stats').then(r=>r.json())]);
+queues=q.queues||[];
+const pending=s.pending||0,running=s.running||0,completed=s.completed||0,failed=s.failed||0;
+document.getElementById('stats').innerHTML='<div class="st"><div class="st-v" style="color:var(--gold)">'+pending+'</div><div class="st-l">Pending</div></div><div class="st"><div class="st-v" style="color:var(--orange)">'+running+'</div><div class="st-l">Running</div></div><div class="st"><div class="st-v" style="color:var(--green)">'+completed+'</div><div class="st-l">Done</div></div><div class="st"><div class="st-v" style="color:var(--red)">'+failed+'</div><div class="st-l">Failed</div></div>';
+let qh='<button class="q-btn'+(curQ===''?' active':'')+'" onclick="setQ(\'\')">All</button>';
+queues.forEach(q=>{qh+='<button class="q-btn'+(curQ===q.id?' active':'')+'" onclick="setQ(\''+q.id+'\')">'+esc(q.name)+'</button>';});
+document.getElementById('queues').innerHTML=qh;loadJobs();}
+function setQ(id){curQ=id;loadJobs();}
+async function loadJobs(){const url=curQ?A+'/queues/'+curQ+'/jobs':A+'/jobs';const r=await fetch(url).then(r=>r.json());jobs=r.jobs||[];renderJobs();}
+function renderJobs(){if(!jobs.length){document.getElementById('jobs').innerHTML='<div class="empty">No jobs in queue.</div>';return;}
+let h='';jobs.forEach(j=>{
+h+='<div class="job"><div><span class="badge badge-'+j.status+'">'+j.status+'</span> <span style="margin-left:.3rem;color:var(--cream)">'+esc((j.payload||'').substring(0,80))+'</span>';
+h+='<div style="font-size:.55rem;color:var(--cm);margin-top:.2rem">Attempt '+j.attempts+'/'+j.max_attempts;
+if(j.started_at)h+=' · Started '+ft(j.started_at);
+if(j.finished_at)h+=' · Done '+ft(j.finished_at);
+if(j.error)h+=' · <span style="color:var(--red)">'+esc(j.error)+'</span>';
+h+='</div></div><div style="display:flex;gap:.3rem">';
+if(j.status==='failed')h+='<button class="btn" onclick="retry(\''+j.id+'\')">Retry</button>';
+h+='<button class="btn" onclick="del(\''+j.id+'\')" style="font-size:.5rem;color:var(--cm)">✕</button></div></div>';});
+document.getElementById('jobs').innerHTML=h;}
+async function retry(id){await fetch(A+'/jobs/'+id+'/retry',{method:'POST'});load();}
+async function del(id){await fetch(A+'/jobs/'+id,{method:'DELETE'});load();}
+function openQueue(){document.getElementById('mdl').innerHTML='<h2>New Queue</h2><div class="fr"><label>Name</label><input id="f-n" placeholder="e.g. email-send"></div><div class="fr"><label>Description</label><input id="f-d"></div><div class="acts"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subQ()">Create</button></div>';document.getElementById('mbg').classList.add('open');}
+async function subQ(){await fetch(A+'/queues',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('f-n').value,description:document.getElementById('f-d').value})});cm();load();}
+function openJob(){let opts=queues.map(q=>'<option value="'+q.id+'">'+esc(q.name)+'</option>').join('');
+document.getElementById('mdl').innerHTML='<h2>Enqueue Job</h2><div class="fr"><label>Queue</label><select id="f-q">'+opts+'</select></div><div class="fr"><label>Payload (JSON)</label><textarea id="f-p" rows="3" placeholder=\'{"action":"send_email","to":"user@example.com"}\'></textarea></div><div class="fr"><label>Priority (0=normal)</label><input id="f-pr" type="number" value="0"></div><div class="acts"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subJ()">Enqueue</button></div>';document.getElementById('mbg').classList.add('open');}
+async function subJ(){await fetch(A+'/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({queue_id:document.getElementById('f-q').value,payload:document.getElementById('f-p').value,priority:parseInt(document.getElementById('f-pr').value)||0})});cm();load();}
+function cm(){document.getElementById('mbg').classList.remove('open');}
+function ft(t){if(!t)return'';return new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+load();setInterval(load,10000);
 </script></body></html>`
